@@ -80,6 +80,12 @@ layout_top('Reports', 'reports');
                 <p>Log of sign-ins and changes made by each user.</p>
                 <div class="report-meta"><span class="format-tag">CSV</span><?= report_button('staff_activity', $query) ?></div>
             </div>
+            <div class="report-card">
+                <span class="stat-icon tint-honey"><?= icon('paw', 20) ?></span>
+                <h3>Daily care logs</h3>
+                <p>Feeding, walks, medication and health checks logged in the staff panel.</p>
+                <div class="report-meta"><span class="format-tag">CSV</span><?= report_button('care_logs', $query) ?></div>
+            </div>
         </div>
         <p class="form-hint" style="margin-top:12px">PDF reports open in a new tab with your browser's print window. Choose "Save as PDF" as the printer.</p>
 

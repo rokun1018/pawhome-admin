@@ -1,4 +1,4 @@
-# PawHome Admin: PHP + Supabase backend
+# PawHome: Admin panel + Staff panel (PHP + Supabase)
 
 Your admin design, now saving to a real database. The pages look the same as your HTML version; they are just `.php` files now.
 
@@ -14,6 +14,26 @@ assets/js/backend.js     <- already here (connects your design to the database)
 
 You don't need to edit `app.js`. `backend.js` loads after it and makes the forms and buttons save for real.
 
+## Installing the Staff panel upgrade (if your admin panel is already live)
+
+Do these in this order:
+
+1. **Backup first:** Supabase > Table Editor > export `pets`, `applications`, `boarding`, `users` as CSV.
+2. **Database:** Supabase > SQL Editor > New query > paste all of `database/upgrade-1-staff.sql` > **Run**. It only adds things; running it twice by accident is harmless.
+3. **Code:** on GitHub, **Add file > Upload files** and drag in everything from this folder **except** `database`. Files with the same name are replaced; your `assets/css/style.css` and `assets/js/app.js` stay as they are.
+4. Wait for Render to show **Live**, then open `https://your-site.onrender.com/staff/`.
+
+New install from scratch? Run `schema.sql`, then `upgrade-1-staff.sql` (then `sample-data.sql` if you want test data).
+
+## How the two panels work together
+
+- **One database, one set of accounts.** The staff panel lives at `/staff/`; the admin panel at `/`.
+- **Staff sign up themselves** at `/staff/login.php`. Their account is *waiting for approval* until a Super Admin presses the tick in **User Management** (the sidebar shows a count). Nobody can sign up as Super Admin.
+- **Decisions are shared.** Approving an application in either panel marks the pet as adopted. Confirming boarding in either panel checks the kennel isn't double-booked.
+- **Pets:** set kennel, caretaker, health and last checkup in the admin Pets form; staff see them in *Pets Under Care*. A "Health Check" care log updates the last checkup automatically.
+- **Everything staff do** appears in the admin dashboard's Recent activity, and care logs can be downloaded from admin **Reports > Daily care logs**.
+- Caretaker roles only see the staff panel. Admin roles see both (link in each panel).
+
 ## What's in the folder
 
 | File | What it does |
@@ -28,6 +48,9 @@ You don't need to edit `app.js`. `backend.js` loads after it and makes the forms
 | `quiz-bank.php`, `generate-quiz.php`, `review-quiz.php` | Eligibility quiz and the AI generator. |
 | `user-management.php`, `reports.php`, `report.php`, `settings.php` | Administration. |
 | `search.php`, `photo.php` | Top bar search and stored photos. |
+| `includes/shared.php` | Rules both panels share (approvals, kennel checks, sign-in). |
+| `staff/` | The staff panel: `index.php`, `login.php`, its `api/` and `auth/` files, and your staff design (`style.css`, `script.js`, `auth.js`). |
+| `database/upgrade-1-staff.sql` | Adds staff roles, care logs and pet care fields. Run once. |
 | `Dockerfile` | Tells Render how to run PHP. Don't edit. |
 
 ## Hosting for free
@@ -83,15 +106,19 @@ To update the site later, change files on GitHub. Render rebuilds by itself.
 
 ## Roles
 
-| Role | Can open |
-|---|---|
-| Super Admin | Everything |
-| Shelter Manager | Pets, adoptions, boarding, quiz, reports. Can delete pets and bookings. |
-| Veterinarian | Pets |
-| Volunteer Coordinator | Pets, boarding |
-| Volunteer | Pets, boarding |
+| Role | Admin panel | Staff panel |
+|---|---|---|
+| Super Admin | Everything | Everything |
+| Shelter Manager | Pets, adoptions, boarding, quiz, reports; can delete | Every decision, health status, reports |
+| Veterinarian | Pets | Change health status |
+| Volunteer Coordinator | Pets, boarding | Confirm or decline boarding |
+| Volunteer | Pets, boarding | Care logs |
+| Senior Caretaker | (none) | Approve applications, confirm boarding, health status, reports |
+| Caretaker | (none) | Confirm or decline boarding |
+| Junior Caretaker | (none) | View everything |
+| Lead Vet Liaison | (none) | Change health status |
 
-Everyone can open the dashboard and their own settings. To change this, edit the `ACCESS` list in `includes/config.php`.
+Everyone who can sign in can view the staff panel and add care logs. To change any of this, edit the `ACCESS` list in `includes/config.php`.
 
 ## Good to know
 

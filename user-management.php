@@ -23,6 +23,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('user-management.php');
     }
 
+    if (($_POST['action'] ?? '') === 'activate') {
+        $stmt = $pdo->prepare("UPDATE users SET status = 'active' WHERE id = ? AND status = 'pending' RETURNING full_name");
+        $stmt->execute([$id]);
+        if ($name = $stmt->fetchColumn()) {
+            log_activity('Staff account approved', $name);
+            flash("$name can now log in");
+        }
+        redirect('user-management.php');
+    }
+
     $data = [
         'full_name' => trim($_POST['full_name'] ?? ''),
         'email'     => strtolower(trim($_POST['email'] ?? '')),
@@ -38,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $error = '';
     if ($data['full_name'] === '' || !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
         $error = 'Enter a full name and a valid email.';
-    } elseif (!isset(ROLES[$data['role']]) || !in_array($data['status'], ['active', 'inactive'], true)) {
+    } elseif (!isset(ROLES[$data['role']]) || !in_array($data['status'], ACCOUNT_STATUSES, true)) {
         $error = 'Choose a role and a status.';
     } elseif ($check->fetch()) {
         $error = "{$data['email']} already belongs to another account.";
@@ -57,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              . ($password !== '' ? ', password=:password' : '') . ' WHERE id=:id';
         if ($password !== '') $data['password'] = password_hash($password, PASSWORD_DEFAULT);
         $pdo->prepare($sql)->execute($data + ['id' => $id]);
-        if ($data['status'] === 'inactive' || $password !== '') {
+        if ($data['status'] !== 'active' || $password !== '') {
             // Sign them out everywhere
             $pdo->prepare('DELETE FROM sessions WHERE user_id = ? AND id <> ?')->execute([$id, session_id()]);
         }
@@ -74,9 +84,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ---------- Load the page ----------
+$pendingCount = (int)$pdo->query("SELECT COUNT(*) FROM users WHERE status = 'pending'")->fetchColumn();
 $users = $pdo->query("SELECT id, full_name, email, phone, role, status, last_active, (avatar IS NOT NULL) AS has_avatar
-                      FROM users ORDER BY status, CASE role WHEN 'super_admin' THEN 0 WHEN 'shelter_manager' THEN 1
-                      WHEN 'veterinarian' THEN 2 WHEN 'volunteer_coordinator' THEN 3 ELSE 4 END, full_name")->fetchAll();
+                      FROM users ORDER BY CASE status WHEN 'pending' THEN 0 WHEN 'active' THEN 1 ELSE 2 END, CASE role WHEN 'super_admin' THEN 0 WHEN 'shelter_manager' THEN 1
+                      WHEN 'veterinarian' THEN 2 WHEN 'senior_caretaker' THEN 3 WHEN 'vet_liaison' THEN 4 ELSE 5 END, full_name")->fetchAll();
 
 layout_top('User Management', 'users');
 ?>
@@ -88,11 +99,15 @@ layout_top('User Management', 'users');
             <div class="page-actions"><button type="button" class="btn btn-primary" data-modal-open="userModal" data-modal-title="Add a new user"><?= icon('plus') ?>Add user</button></div>
         </div>
 
+        <?php if ($pendingCount): ?>
+            <div class="alert alert-success" role="status"><?= icon('users') ?><span><strong><?= $pendingCount ?></strong> staff sign-up<?= $pendingCount > 1 ? 's are' : ' is' ?> waiting for approval. Check the role, then press the tick to let them log in to the staff panel.</span></div>
+        <?php endif; ?>
+
         <div class="card toolbar">
             <div class="search-field"><?= icon('search') ?><input type="search" class="form-control" placeholder="Search by name or email" aria-label="Search" value="<?= e($_GET['q'] ?? '') ?>" data-filter="search" data-filter-table="usersTable"></div>
             <select class="form-control" aria-label="Role" data-filter="role" data-filter-table="usersTable"><option value="all">All roles</option>
                 <?php foreach (ROLES as $k => $v): ?><option value="<?= $k ?>"><?= $v ?></option><?php endforeach; ?></select>
-            <select class="form-control" aria-label="Status" data-filter="status" data-filter-table="usersTable"><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
+            <select class="form-control" aria-label="Status" data-filter="status" data-filter-table="usersTable"><option value="all">All statuses</option><option value="pending">Waiting for approval</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
         </div>
 
         <section class="card card-flush">
@@ -106,8 +121,11 @@ layout_top('User Management', 'users');
                             <td><span class="badge badge-role"><?= e(ROLES[$u['role']]) ?></span></td>
                             <td><?= e($u['phone'] ?: '–') ?></td>
                             <td><?= e(time_ago($u['last_active'], 'Online now')) ?></td>
-                            <td><span class="badge badge-<?= e($u['status']) ?>" data-status-badge><?= e(label($u['status'])) ?></span></td>
+                            <td><span class="badge badge-<?= e($u['status']) ?>" data-status-badge><?= $u['status'] === 'pending' ? 'Waiting for approval' : e(label($u['status'])) ?></span></td>
                             <td><div class="actions">
+                                <?php if ($u['status'] === 'pending'): ?>
+                                <form method="post" data-server style="display:contents"><?= csrf_field() ?><input type="hidden" name="action" value="activate"><input type="hidden" name="id" value="<?= $u['id'] ?>"><button type="submit" class="icon-action success" title="Approve account" aria-label="Approve account"><?= icon('check', 16) ?></button></form>
+                                <?php endif; ?>
                                 <button type="button" class="icon-action" title="Edit" aria-label="Edit" data-modal-open="userModal" data-modal-title="Edit user"><?= icon('edit', 16) ?></button>
                                 <?php if (!$self): ?><?= delete_button($u['id'], "Remove {$u['full_name']} from the team? They will lose access immediately.") ?><?php endif; ?>
                             </div></td>
@@ -122,12 +140,17 @@ layout_top('User Management', 'users');
         </section>
 
         <h3 class="section-title">What each role can do</h3>
+        <p class="card-sub" style="margin-bottom:12px">Everyone can open the staff panel at <a href="/staff/">/staff/</a> and add daily care logs. Caretaker roles use only the staff panel.</p>
         <div class="grid-3">
-            <div class="card"><h4>Super Admin</h4><p class="card-sub">Everything, including users, roles and system settings.</p></div>
-            <div class="card"><h4>Shelter Manager</h4><p class="card-sub">Pets, adoptions, boarding, quiz bank and reports.</p></div>
-            <div class="card"><h4>Veterinarian</h4><p class="card-sub">Pet records and health notes only.</p></div>
-            <div class="card"><h4>Volunteer Coordinator</h4><p class="card-sub">Pet records and boarding bookings.</p></div>
-            <div class="card"><h4>Volunteer</h4><p class="card-sub">Pet records and boarding bookings. Can't delete anything.</p></div>
+            <div class="card"><h4>Super Admin</h4><p class="card-sub">Everything in both panels, including users, roles and system settings.</p></div>
+            <div class="card"><h4>Shelter Manager</h4><p class="card-sub">Admin: pets, adoptions, boarding, quiz bank, reports. Staff panel: every decision and report.</p></div>
+            <div class="card"><h4>Veterinarian</h4><p class="card-sub">Admin: pet records. Staff panel: can change a pet's health status.</p></div>
+            <div class="card"><h4>Volunteer Coordinator</h4><p class="card-sub">Admin: pets and boarding. Staff panel: can confirm or decline boarding.</p></div>
+            <div class="card"><h4>Volunteer</h4><p class="card-sub">Admin: pets and boarding, no deleting. Staff panel: care logs.</p></div>
+            <div class="card"><h4>Senior Caretaker</h4><p class="card-sub">Staff panel only: approve applications, confirm boarding, health status, reports.</p></div>
+            <div class="card"><h4>Caretaker</h4><p class="card-sub">Staff panel only: confirm or decline boarding, care logs.</p></div>
+            <div class="card"><h4>Junior Caretaker</h4><p class="card-sub">Staff panel only: view everything, add care logs.</p></div>
+            <div class="card"><h4>Lead Vet Liaison</h4><p class="card-sub">Staff panel only: change a pet's health status, add care logs.</p></div>
         </div>
 <?php layout_main_end(); ?>
 
@@ -149,7 +172,7 @@ layout_top('User Management', 'users');
                 <div class="form-row">
                     <div class="form-group"><label for="role_32">Role <span class="required">*</span></label><select class="form-control" id="role_32" name="role" required><option value="">Choose role</option>
                         <?php foreach (ROLES as $k => $v): ?><option value="<?= $k ?>"><?= $v ?></option><?php endforeach; ?></select></div>
-                    <div class="form-group"><label for="status_33">Status <span class="required">*</span></label><select class="form-control" id="status_33" name="status" required><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+                    <div class="form-group"><label for="status_33">Status <span class="required">*</span></label><select class="form-control" id="status_33" name="status" required><option value="active">Active</option><option value="pending">Waiting for approval</option><option value="inactive">Inactive</option></select></div>
                 </div>
                 <div class="form-row">
                     <div class="form-group"><label for="password_34">Password</label><input class="form-control" type="password" id="password_34" name="password" minlength="8" autocomplete="new-password" data-required-on-add><span class="form-hint">At least 8 characters. When editing, leave blank to keep the current one.</span></div>

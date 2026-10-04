@@ -2,9 +2,9 @@
 require __DIR__ . '/includes/config.php';
 require __DIR__ . '/includes/layout.php';
 
-if (current_user()) redirect('index.php');
+if ($u = current_user()) redirect(in_array($u['role'], ACCESS['admin_panel'], true) ? 'index.php' : '/staff/');
 
-$error = false;
+$error = '';
 $email = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
@@ -13,24 +13,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->execute([$email]);
     $user = $stmt->fetch();
 
-    if ($user && $user['status'] === 'active' && password_verify($_POST['password'] ?? '', $user['password'])) {
-        session_regenerate_id(true);
-        unset($user['password']);
-        $_SESSION['user'] = $user;
-        $_SESSION['last_seen'] = time();
-        $_SESSION['remember'] = !empty($_POST['remember']);
-        if ($_SESSION['remember']) {
-            // Keep the sign-in cookie for 30 days instead of until the browser closes
-            setcookie(session_name(), session_id(), [
-                'expires' => time() + REMEMBER_SECONDS, 'path' => '/',
-                'secure' => is_https(), 'httponly' => true, 'samesite' => 'Lax',
-            ]);
-        }
-        $pdo->prepare('UPDATE users SET last_active = NOW() WHERE id = ?')->execute([$user['id']]);
-        log_activity('Signed in');
-        redirect('index.php');
+    $passwordOk = $user && password_verify($_POST['password'] ?? '', $user['password']);
+    if ($passwordOk && $user['status'] === 'pending') {
+        $error = 'Your account is waiting for a Super Admin to approve it.';
+    } elseif ($passwordOk && $user['status'] === 'active') {
+        sign_in($user, !empty($_POST['remember']));
+        // Caretaker roles only use the staff panel
+        redirect(in_array($user['role'], ACCESS['admin_panel'], true) ? 'index.php' : '/staff/');
+    } else {
+        $error = "That email and password don't match. Check both and try again.";
     }
-    $error = true;
 }
 
 auth_top('Sign in');
@@ -42,7 +34,7 @@ auth_top('Sign in');
                 <div class="alert alert-success" role="status"><?= icon('check') ?><span>Your password has been changed. Sign in with the new one.</span></div>
             <?php endif; ?>
             <?php if ($error): ?>
-                <div class="alert alert-error" role="alert"><?= icon('x') ?><span>That email and password don't match. Check both and try again.</span></div>
+                <div class="alert alert-error" role="alert"><?= icon('x') ?><span><?= e($error) ?></span></div>
             <?php endif; ?>
 
             <form id="loginForm" method="post" action="login.php" data-server>

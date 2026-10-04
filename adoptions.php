@@ -7,36 +7,15 @@ require_access('adoptions');
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
     $id = (int)($_POST['id'] ?? 0);
-    $stmt = $pdo->prepare('SELECT a.*, p.name AS pet_name FROM applications a LEFT JOIN pets p ON p.id = a.pet_id WHERE a.id = ?');
-    $stmt->execute([$id]);
-    $app = $stmt->fetch();
-    if (!$app) json_response(['ok' => false, 'error' => 'That application no longer exists. Refresh the page.'], 404);
 
     if (isset($_POST['admin_notes'])) {
         $pdo->prepare('UPDATE applications SET admin_notes = ? WHERE id = ?')->execute([trim($_POST['admin_notes']), $id]);
     }
-
     if (($_POST['action'] ?? '') === 'status') {
-        $status = $_POST['status'] ?? '';
-        if (!in_array($status, ['pending', 'review', 'approved', 'rejected'], true)) {
-            json_response(['ok' => false, 'error' => 'Unknown status.'], 400);
+        // Same rule the staff panel uses (includes/shared.php)
+        if ($error = set_application_status($id, $_POST['status'] ?? '')) {
+            json_response(['ok' => false, 'error' => $error], 400);
         }
-        $pdo->beginTransaction();
-        $pdo->prepare("UPDATE applications SET status = ?, decided_at = CASE WHEN ? IN ('approved','rejected') THEN NOW() ELSE NULL END WHERE id = ?")
-            ->execute([$status, $status, $id]);
-
-        // Keep the pet's status in step with the decision
-        if ($app['pet_id']) {
-            if ($status === 'approved') {
-                $pdo->prepare("UPDATE pets SET status = 'adopted' WHERE id = ?")->execute([$app['pet_id']]);
-            } elseif ($app['status'] === 'approved') {
-                $pdo->prepare("UPDATE pets SET status = 'available' WHERE id = ? AND status = 'adopted'")->execute([$app['pet_id']]);
-            }
-        }
-        $pdo->commit();
-
-        $words = ['approved' => 'Adoption approved', 'rejected' => 'Application rejected', 'review' => 'Application under review', 'pending' => 'Application set to pending'];
-        log_activity($words[$status], $app['applicant_name'] . ($app['pet_name'] ? ' for ' . $app['pet_name'] : ''));
     }
     json_response(['ok' => true]);
 }

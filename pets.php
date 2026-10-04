@@ -30,6 +30,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'intake_date' => $_POST['intake_date'] ?? '',
         'status'      => $_POST['status'] ?? 'available',
         'description' => trim($_POST['description'] ?? ''),
+        // Daily-care details (shown in the staff panel)
+        'kennel'        => trim($_POST['kennel'] ?? '') ?: null,
+        'caretaker_id'  => (int)($_POST['caretaker_id'] ?? 0) ?: null,
+        'health_status' => $_POST['health_status'] ?? 'healthy',
+        'last_checkup'  => ($_POST['last_checkup'] ?? '') ?: null,
     ];
     $photo = uploaded_image('photo', 2 * 1024 * 1024);
 
@@ -41,6 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!in_array($data['status'], ['available', 'reserved', 'adopted', 'medical'], true)) $errors[] = 'status';
     if (!DateTime::createFromFormat('Y-m-d', $data['intake_date'])) $errors[] = 'intake date';
     if ($data['age_months'] < 0 || $data['age_months'] > 360) $errors[] = 'age';
+    if (!isset(HEALTH_STATUSES[$data['health_status']])) $errors[] = 'health status';
+    if ($data['last_checkup'] && !DateTime::createFromFormat('Y-m-d', $data['last_checkup'])) $errors[] = 'last checkup';
 
     if ($photo === false) {
         flash('The photo must be a JPG or PNG under 2 MB.', 'error');
@@ -48,7 +55,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('Check these fields and try again: ' . implode(', ', $errors) . '.', 'error');
     } elseif ($id) {
         $sql = 'UPDATE pets SET name=:name, species=:species, breed=:breed, age_months=:age_months, gender=:gender,
-                size=:size, shelter_id=:shelter_id, intake_date=:intake_date, status=:status, description=:description'
+                size=:size, shelter_id=:shelter_id, intake_date=:intake_date, status=:status, description=:description,
+                kennel=:kennel, caretaker_id=:caretaker_id, health_status=:health_status, last_checkup=:last_checkup'
              . ($photo ? ', photo=:photo' : '') . ' WHERE id=:id';
         if ($photo) $data['photo'] = $photo;
         $pdo->prepare($sql)->execute($data + ['id' => $id]);
@@ -56,8 +64,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('Pet saved');
     } else {
         $data['photo'] = $photo;
-        $pdo->prepare('INSERT INTO pets (name, species, breed, age_months, gender, size, shelter_id, intake_date, status, description, photo)
-                       VALUES (:name, :species, :breed, :age_months, :gender, :size, :shelter_id, :intake_date, :status, :description, :photo)')
+        $pdo->prepare('INSERT INTO pets (name, species, breed, age_months, gender, size, shelter_id, intake_date, status, description, photo,
+                                         kennel, caretaker_id, health_status, last_checkup)
+                       VALUES (:name, :species, :breed, :age_months, :gender, :size, :shelter_id, :intake_date, :status, :description, :photo,
+                               :kennel, :caretaker_id, :health_status, :last_checkup)')
             ->execute($data);
         log_activity('New pet registered', $data['name'] . ($data['breed'] ? ' (' . $data['breed'] . ')' : ''));
         flash('Pet saved');
@@ -68,8 +78,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ---------- Load the page ----------
 $shelters = $pdo->query('SELECT id, name FROM shelters ORDER BY id')->fetchAll();
 $short = fn($name) => trim(preg_replace('/^PawHome\s+|\s+(Rescue Sanctuary|Safe Haven)$/', '', $name));
+$caretakers = $pdo->query("SELECT id, full_name FROM users WHERE status = 'active' ORDER BY full_name")->fetchAll();
 $pets = $pdo->query('SELECT p.id, p.name, p.species, p.breed, p.age_months, p.gender, p.size, p.shelter_id, p.intake_date,
-                            p.status, p.description, (p.photo IS NOT NULL) AS has_photo, s.name AS shelter_name
+                            p.status, p.description, (p.photo IS NOT NULL) AS has_photo, s.name AS shelter_name,
+                            p.kennel, p.caretaker_id, p.health_status, p.last_checkup
                      FROM pets p LEFT JOIN shelters s ON s.id = p.shelter_id
                      ORDER BY p.intake_date DESC, p.id DESC')->fetchAll();
 
@@ -101,7 +113,7 @@ layout_top('Pets', 'pets');
                     <thead><tr><th>Pet</th><th>Species</th><th>Age</th><th>Gender</th><th>Shelter</th><th>Intake date</th><th>Status</th><th>Actions</th></tr></thead>
                     <tbody>
                     <?php foreach ($pets as $p): ?>
-                        <tr data-id="<?= $p['id'] ?>" data-name="<?= e($p['name']) ?>" data-species="<?= e($p['species']) ?>" data-breed="<?= e($p['breed']) ?>" data-age-months="<?= $p['age_months'] ?>" data-gender="<?= e($p['gender']) ?>" data-size="<?= e($p['size']) ?>" data-shelter-id="<?= $p['shelter_id'] ?>" data-intake-date="<?= e($p['intake_date']) ?>" data-status="<?= e($p['status']) ?>" data-description="<?= e($p['description']) ?>">
+                        <tr data-id="<?= $p['id'] ?>" data-name="<?= e($p['name']) ?>" data-species="<?= e($p['species']) ?>" data-breed="<?= e($p['breed']) ?>" data-age-months="<?= $p['age_months'] ?>" data-gender="<?= e($p['gender']) ?>" data-size="<?= e($p['size']) ?>" data-shelter-id="<?= $p['shelter_id'] ?>" data-intake-date="<?= e($p['intake_date']) ?>" data-status="<?= e($p['status']) ?>" data-description="<?= e($p['description']) ?>" data-kennel="<?= e($p['kennel']) ?>" data-caretaker-id="<?= $p['caretaker_id'] ?>" data-health-status="<?= e($p['health_status']) ?>" data-last-checkup="<?= e($p['last_checkup']) ?>">
                             <td><div class="cell-user">
                                 <?php if ($p['has_photo']): ?>
                                     <span class="avatar avatar-sm <?= tint($p['id']) ?>"><img src="photo.php?pet=<?= $p['id'] ?>" alt="" loading="lazy" style="width:100%;height:100%;border-radius:inherit;object-fit:cover"></span>
@@ -159,6 +171,18 @@ layout_top('Pets', 'pets');
                 <div class="form-row">
                     <div class="form-group"><label for="status_9">Status <span class="required">*</span></label><select class="form-control" id="status_9" name="status" required><option value="available">Available</option><option value="reserved">Reserved</option><option value="adopted">Adopted</option><option value="medical">Medical care</option></select></div>
                     <div class="form-group"><label for="photo_10">Photo</label><input class="form-control" type="file" id="photo_10" name="photo" accept="image/jpeg,image/png,image/webp"><span class="form-hint">JPG or PNG, up to 2 MB. Leave empty to keep the current photo.</span></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label for="kennel_p1">Kennel</label><input class="form-control" type="text" id="kennel_p1" name="kennel" placeholder="e.g. A-3" maxlength="20"></div>
+                    <div class="form-group"><label for="caretaker_p2">Caretaker</label><select class="form-control" id="caretaker_p2" name="caretaker_id"><option value="">Not assigned</option>
+                        <?php foreach ($caretakers as $c): ?><option value="<?= $c['id'] ?>"><?= e($c['full_name']) ?></option><?php endforeach; ?>
+                    </select></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label for="health_p3">Health</label><select class="form-control" id="health_p3" name="health_status">
+                        <?php foreach (HEALTH_STATUSES as $k => $v): ?><option value="<?= $k ?>"><?= $v ?></option><?php endforeach; ?>
+                    </select><span class="form-hint">Shown to staff in the staff panel.</span></div>
+                    <div class="form-group"><label for="checkup_p4">Last checkup</label><input class="form-control" type="date" id="checkup_p4" name="last_checkup"><span class="form-hint">Updates by itself when staff log a health check.</span></div>
                 </div>
                 <div class="form-group"><label for="pet_description">Notes and temperament</label><textarea class="form-control" id="pet_description" name="description" placeholder="Good with children, needs daily walks, vaccinated"></textarea></div>
             </div>

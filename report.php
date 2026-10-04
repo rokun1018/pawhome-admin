@@ -116,6 +116,16 @@ switch ($type) {
         $stmt->execute([date_default_timezone_get(), $from, $to]);
         send_csv($file('staff-activity'), ['Date and time', 'User', 'Action', 'Details'], $stmt);
 
+    case 'care_logs':
+        $stmt = $pdo->prepare("SELECT c.log_date, to_char(c.log_time, 'HH24:MI'), p.name, s.name, u.full_name, c.activity, c.notes
+                               FROM care_logs c JOIN pets p ON p.id = c.pet_id LEFT JOIN shelters s ON s.id = p.shelter_id
+                               LEFT JOIN users u ON u.id = c.caretaker_id
+                               WHERE c.log_date BETWEEN ? AND ? $shelterSql ORDER BY c.log_date DESC, c.log_time DESC");
+        $stmt->execute([$from, $to]);
+        $stmt->setFetchMode(PDO::FETCH_NUM);
+        send_csv($file('care-logs'), ['Date', 'Time', 'Pet', 'Shelter', 'Caretaker', 'Activity', 'Notes'],
+            array_map(fn($r) => [$r[0], $r[1], $r[2], $r[3], $r[4], CARE_ACTIVITIES[$r[5]] ?? $r[5], $r[6]], $stmt->fetchAll()));
+
     case 'quiz':
         // For each question: how many applicants answered it, and how many picked the recommended answer
         $stmt = $pdo->prepare("SELECT q.id, q.question_text, q.category, q.pet_type, q.difficulty, q.status,

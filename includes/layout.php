@@ -60,6 +60,8 @@ function layout_top(string $title, string $active = ''): void
     $checkIns = can('boarding')
         ? $pdo->query("SELECT pet_name, kennel FROM boarding
                        WHERE check_in = CURRENT_DATE + 1 AND status IN ('pending','confirmed') ORDER BY pet_name")->fetchAll() : [];
+    $waitingStaff = can('users')
+        ? (int)$pdo->query("SELECT COUNT(*) FROM users WHERE status = 'pending'")->fetchColumn() : 0;
     $recent = $pdo->query('SELECT user_name, action, details, created_at FROM activity_log
                            WHERE action NOT IN (\'Signed in\', \'Signed out\', \'Downloaded report\')
                            ORDER BY created_at DESC LIMIT 3')->fetchAll();
@@ -89,7 +91,7 @@ function layout_top(string $title, string $active = ''): void
         <?php endif; ?>
         <span class="nav-section">Administration</span>
         <?php if (can('users')): ?>
-            <?= nav_link('user-management.php', 'users', 'User Management', $active, 'users') ?>
+            <?= nav_link('user-management.php', 'users', 'User Management', $active, 'users', $waitingStaff ? '<span class="nav-count">' . $waitingStaff . '</span>' : '') ?>
         <?php endif; ?>
         <?php if (can('reports')): ?>
             <?= nav_link('reports.php', 'file', 'Reports', $active, 'reports') ?>
@@ -97,6 +99,7 @@ function layout_top(string $title, string $active = ''): void
         <?= nav_link('settings.php', 'sliders', 'Settings', $active, 'settings') ?>
     </nav>
     <div class="sidebar-footer">
+        <a href="/staff/" class="nav-item"><?= icon('clipboard') ?>Staff panel</a>
         <a href="logout.php" class="nav-item"><?= icon('logout') ?>Log out</a>
     </div>
 </aside>
@@ -112,11 +115,14 @@ function layout_top(string $title, string $active = ''): void
         </form>
         <div class="topbar-actions">
             <div class="dropdown">
-                <button class="icon-btn" data-dropdown-toggle aria-label="Notifications" aria-expanded="false"><?= icon('bell', 20) ?><?php if ($pending || $checkIns): ?><span class="notif-dot"></span><?php endif; ?></button>
+                <button class="icon-btn" data-dropdown-toggle aria-label="Notifications" aria-expanded="false"><?= icon('bell', 20) ?><?php if ($pending || $checkIns || $waitingStaff): ?><span class="notif-dot"></span><?php endif; ?></button>
                 <div class="dropdown-menu notif-menu">
                     <div class="dropdown-header"><strong>Notifications</strong><button type="button" data-mark-read>Mark all as read</button></div>
                     <?php if ($pending): ?>
                         <a href="adoptions.php" class="notif-item"><span class="activity-dot dot-honey"></span><span><?= $pending ?> adoption application<?= $pending > 1 ? 's' : '' ?> waiting<small>Pending review</small></span></a>
+                    <?php endif; ?>
+                    <?php if ($waitingStaff): ?>
+                        <a href="user-management.php" class="notif-item"><span class="activity-dot dot-plum"></span><span><?= $waitingStaff ?> staff sign-up<?= $waitingStaff > 1 ? 's' : '' ?> waiting<small>Approve in User Management</small></span></a>
                     <?php endif; ?>
                     <?php foreach ($checkIns as $c): ?>
                         <a href="boarding.php" class="notif-item"><span class="activity-dot dot-blue"></span><span><?= e($c['pet_name']) ?> checks in tomorrow<small>Boarding<?= $c['kennel'] ? ', kennel ' . e($c['kennel']) : '' ?></small></span></a>
@@ -124,7 +130,7 @@ function layout_top(string $title, string $active = ''): void
                     <?php foreach ($recent as $r): ?>
                         <a href="index.php" class="notif-item"><span class="activity-dot dot-green"></span><span><?= e($r['action']) ?><small><?= e($r['details'] ?: $r['user_name']) ?>, <?= e(time_ago($r['created_at'])) ?></small></span></a>
                     <?php endforeach; ?>
-                    <?php if (!$pending && !$checkIns && !$recent): ?>
+                    <?php if (!$pending && !$checkIns && !$waitingStaff && !$recent): ?>
                         <p class="notif-item"><span>You're all caught up.</span></p>
                     <?php endif; ?>
                 </div>

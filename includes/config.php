@@ -27,6 +27,10 @@ try {
     http_response_code(500);
     die('Could not connect to the database. Check the DB_ settings on your host.');
 }
+// Make the database's "today" match ours (Supabase runs on UTC by default)
+if (in_array(date_default_timezone_get(), DateTimeZone::listIdentifiers(), true)) {
+    $pdo->exec("SET TIME ZONE '" . date_default_timezone_get() . "'");
+}
 
 // ---------- 2. Sessions stored in the database --------------------------
 // Free hosts restart often and wipe their disk. Keeping sessions in the
@@ -98,10 +102,20 @@ const ROLES = [
     'veterinarian'          => 'Veterinarian',
     'volunteer_coordinator' => 'Volunteer Coordinator',
     'volunteer'             => 'Volunteer',
+    'senior_caretaker'      => 'Senior Caretaker',
+    'caretaker'             => 'Caretaker',
+    'junior_caretaker'      => 'Junior Caretaker',
+    'vet_liaison'           => 'Lead Vet Liaison',
 ];
+
+// Roles people can pick themselves on the staff sign-up page.
+// Their account stays "pending" until a Super Admin approves it.
+const SIGNUP_ROLES = ['shelter_manager', 'senior_caretaker', 'caretaker', 'junior_caretaker', 'vet_liaison'];
 
 // Change these lists to change who can see what.
 const ACCESS = [
+    // ---- Admin panel ----
+    'admin_panel'  => ['super_admin', 'shelter_manager', 'veterinarian', 'volunteer_coordinator', 'volunteer'],
     'pets'         => ['super_admin', 'shelter_manager', 'veterinarian', 'volunteer_coordinator', 'volunteer'],
     'adoptions'    => ['super_admin', 'shelter_manager'],
     'boarding'     => ['super_admin', 'shelter_manager', 'volunteer_coordinator', 'volunteer'],
@@ -110,7 +124,15 @@ const ACCESS = [
     'users'        => ['super_admin'],
     'delete'       => ['super_admin', 'shelter_manager'],   // deleting pets and bookings
     'organisation' => ['super_admin'],
+
+    // ---- Staff panel (everyone signed in can open it and add care logs) ----
+    'staff_applications' => ['super_admin', 'shelter_manager', 'senior_caretaker'],                         // approve / reject
+    'staff_boarding'     => ['super_admin', 'shelter_manager', 'senior_caretaker', 'caretaker', 'volunteer_coordinator'], // confirm / decline
+    'staff_health'       => ['super_admin', 'shelter_manager', 'senior_caretaker', 'vet_liaison', 'veterinarian'],        // change a pet's health status
+    'staff_reports'      => ['super_admin', 'shelter_manager', 'senior_caretaker'],
 ];
+
+const ACCOUNT_STATUSES = ['active', 'inactive', 'pending'];
 
 function current_user(): ?array
 {
@@ -125,7 +147,8 @@ function can(string $area): bool
 
 // Put at the top of every private page. Re-reads the account each time, so
 // a role change or deactivation takes effect straight away.
-function require_login(): array
+// $panel = 'admin' for admin pages, 'staff' for pages in the staff/ folder.
+function require_login(string $panel = 'admin'): array
 {
     global $pdo;
     $user = current_user();
@@ -143,7 +166,13 @@ function require_login(): array
     if (!$user || $user['status'] !== 'active') {
         $_SESSION = [];
         session_destroy();
-        header('Location: login.php');
+        if (is_api_request()) json_response(['ok' => false, 'error' => 'Please log in again.'], 401);
+        header('Location: ' . ($panel === 'staff' ? '/staff/login.php' : '/login.php'));
+        exit;
+    }
+    // Caretakers only have the staff panel
+    if ($panel === 'admin' && !in_array($user['role'], ACCESS['admin_panel'], true)) {
+        header('Location: /staff/');
         exit;
     }
 
@@ -153,6 +182,12 @@ function require_login(): array
         $pdo->prepare('UPDATE users SET last_active = NOW() WHERE id = ?')->execute([$user['id']]);
     }
     return $user;
+}
+
+function is_api_request(): bool
+{
+    return ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'fetch'
+        || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
 }
 
 function require_access(string $area): array
@@ -292,6 +327,7 @@ const REPORTS = [
     'quiz'           => ['Quiz pass rates', 'CSV'],
     'boarding'       => ['Boarding summary', 'PDF'],
     'staff_activity' => ['Staff activity', 'CSV'],
+    'care_logs'      => ['Daily care logs', 'CSV'],
     'applications'   => ['Adoption applications', 'CSV'],
     'summary'        => ['Shelter summary', 'PDF'],
 ];
@@ -345,3 +381,4 @@ function base_url(): string
 }
 
 require __DIR__ . '/icons.php';
+require __DIR__ . '/shared.php';

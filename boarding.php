@@ -3,8 +3,6 @@ require __DIR__ . '/includes/config.php';
 require __DIR__ . '/includes/layout.php';
 require_access('boarding');
 
-const BOOKING_STATUSES = ['pending', 'confirmed', 'checked_in', 'completed', 'cancelled'];
-
 // ---------- Save or delete ----------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
@@ -47,14 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'The owner email doesn\'t look right.';
     } elseif ($data['kennel'] && !in_array($data['status'], ['completed', 'cancelled'], true)) {
         // Is the kennel already taken for any of these nights?
-        // Same-day turnover is fine: one pet can check out the morning another checks in.
-        $stmt = $pdo->prepare("SELECT pet_name FROM boarding
-                               WHERE kennel = ? AND id <> ? AND status IN ('pending','confirmed','checked_in')
-                                 AND daterange(check_in, GREATEST(check_out, check_in + 1))
-                                  && daterange(?::date, GREATEST(?::date, ?::date + 1))
-                               LIMIT 1");
-        $stmt->execute([$data['kennel'], $id, $data['check_in'], $data['check_out'], $data['check_in']]);
-        if ($other = $stmt->fetchColumn()) {
+        if ($other = kennel_conflict($data['kennel'], $data['check_in'], $data['check_out'], $id)) {
             $error = "Kennel {$data['kennel']} is already booked for $other on some of those dates. Pick another kennel or change the dates.";
         }
     }
@@ -114,7 +105,7 @@ layout_top('Boarding', 'boarding');
 
         <div class="card toolbar">
             <div class="search-field"><?= icon('search') ?><input type="search" class="form-control" placeholder="Search pet, owner or kennel" aria-label="Search" value="<?= e($_GET['q'] ?? '') ?>" data-filter="search" data-filter-table="bookingsTable"></div>
-            <select class="form-control" aria-label="Status" data-filter="status" data-filter-table="bookingsTable"><option value="all">All statuses</option><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="checked_in">Checked in</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select>
+            <select class="form-control" aria-label="Status" data-filter="status" data-filter-table="bookingsTable"><option value="all">All statuses</option><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="checked_in">Checked in</option><option value="completed">Completed</option><option value="declined">Declined</option><option value="cancelled">Cancelled</option></select>
             <select class="form-control" aria-label="Species" data-filter="species" data-filter-table="bookingsTable"><option value="all">All species</option><option value="dog">Dogs</option><option value="cat">Cats</option><option value="rabbit">Rabbits</option><option value="bird">Birds</option><option value="other">Other</option></select>
         </div>
 
@@ -128,7 +119,7 @@ layout_top('Boarding', 'boarding');
                             <td><div class="cell-user"><span class="avatar avatar-sm <?= tint($b['id']) ?>"><?= e(mb_strtoupper(mb_substr($b['pet_name'], 0, 1))) ?></span><div><strong><?= e($b['pet_name']) ?></strong><small><?= e(trim($b['breed'] . ' ' . $b['species'])) ?></small></div></div></td>
                             <td><?= e($b['owner_name']) ?><small class="block"><?= e($b['owner_phone']) ?></small></td>
                             <td><?= fmt_date($b['check_in']) ?></td><td><?= fmt_date($b['check_out']) ?></td><td><?= e($b['kennel'] ?: 'Not assigned') ?></td>
-                            <td><span class="badge badge-<?= e($b['status']) ?>" data-status-badge><?= e(label($b['status'])) ?></span></td>
+                            <td><span class="badge badge-<?= e($b['status'] === 'declined' ? 'cancelled' : $b['status']) ?>" data-status-badge><?= e(label($b['status'])) ?></span></td>
                             <td><div class="actions">
                                 <button type="button" class="icon-action" title="Edit" aria-label="Edit" data-modal-open="bookingModal" data-modal-title="Edit booking"><?= icon('edit', 16) ?></button>
                                 <?php if (can('delete')): ?><?= delete_button($b['id'], "Delete the booking for {$b['pet_name']}?") ?><?php endif; ?>
@@ -174,7 +165,7 @@ layout_top('Boarding', 'boarding');
                     <div class="form-group"><label for="check_in_18">Check-in date <span class="required">*</span></label><input class="form-control" type="date" id="check_in_18" name="check_in" required></div>
                     <div class="form-group"><label for="check_out_19">Check-out date <span class="required">*</span></label><input class="form-control" type="date" id="check_out_19" name="check_out" required></div>
                 </div>
-                <div class="form-group"><label for="status_20">Status <span class="required">*</span></label><select class="form-control" id="status_20" name="status" required><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="checked_in">Checked in</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div>
+                <div class="form-group"><label for="status_20">Status <span class="required">*</span></label><select class="form-control" id="status_20" name="status" required><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="checked_in">Checked in</option><option value="completed">Completed</option><option value="declined">Declined</option><option value="cancelled">Cancelled</option></select></div>
                 <div class="form-group"><label for="special_notes">Care notes</label><textarea class="form-control" id="special_notes" name="special_notes" placeholder="Feeding schedule, medication, allergies"></textarea></div>
             </div>
             <div class="modal-footer"><button type="button" class="btn btn-ghost" data-modal-close>Cancel</button><button type="submit" class="btn btn-primary"><?= icon('save') ?>Save booking</button></div>
