@@ -35,6 +35,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'caretaker_id'  => (int)($_POST['caretaker_id'] ?? 0) ?: null,
         'health_status' => $_POST['health_status'] ?? 'healthy',
         'last_checkup'  => ($_POST['last_checkup'] ?? '') ?: null,
+        // Shown on the public website
+        'traits'        => implode(', ', array_slice(array_filter(array_map('trim', explode(',', $_POST['traits'] ?? ''))), 0, 6)) ?: null,
+        'adoption_fee'  => ($_POST['adoption_fee'] ?? '') !== '' ? max(0, (float)$_POST['adoption_fee']) : null,
+        'health_notes'  => mb_substr(trim($_POST['health_notes'] ?? ''), 0, 200) ?: null,
     ];
     $photo = uploaded_image('photo', 2 * 1024 * 1024);
 
@@ -56,7 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($id) {
         $sql = 'UPDATE pets SET name=:name, species=:species, breed=:breed, age_months=:age_months, gender=:gender,
                 size=:size, shelter_id=:shelter_id, intake_date=:intake_date, status=:status, description=:description,
-                kennel=:kennel, caretaker_id=:caretaker_id, health_status=:health_status, last_checkup=:last_checkup'
+                kennel=:kennel, caretaker_id=:caretaker_id, health_status=:health_status, last_checkup=:last_checkup,
+                traits=:traits, adoption_fee=:adoption_fee, health_notes=:health_notes'
              . ($photo ? ', photo=:photo' : '') . ' WHERE id=:id';
         if ($photo) $data['photo'] = $photo;
         $pdo->prepare($sql)->execute($data + ['id' => $id]);
@@ -65,9 +70,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $data['photo'] = $photo;
         $pdo->prepare('INSERT INTO pets (name, species, breed, age_months, gender, size, shelter_id, intake_date, status, description, photo,
-                                         kennel, caretaker_id, health_status, last_checkup)
+                                         kennel, caretaker_id, health_status, last_checkup, traits, adoption_fee, health_notes)
                        VALUES (:name, :species, :breed, :age_months, :gender, :size, :shelter_id, :intake_date, :status, :description, :photo,
-                               :kennel, :caretaker_id, :health_status, :last_checkup)')
+                               :kennel, :caretaker_id, :health_status, :last_checkup, :traits, :adoption_fee, :health_notes)')
             ->execute($data);
         log_activity('New pet registered', $data['name'] . ($data['breed'] ? ' (' . $data['breed'] . ')' : ''));
         flash('Pet saved');
@@ -81,7 +86,7 @@ $short = fn($name) => trim(preg_replace('/^PawHome\s+|\s+(Rescue Sanctuary|Safe 
 $caretakers = $pdo->query("SELECT id, full_name FROM users WHERE status = 'active' ORDER BY full_name")->fetchAll();
 $pets = $pdo->query('SELECT p.id, p.name, p.species, p.breed, p.age_months, p.gender, p.size, p.shelter_id, p.intake_date,
                             p.status, p.description, (p.photo IS NOT NULL) AS has_photo, s.name AS shelter_name,
-                            p.kennel, p.caretaker_id, p.health_status, p.last_checkup
+                            p.kennel, p.caretaker_id, p.health_status, p.last_checkup, p.traits, p.adoption_fee, p.health_notes
                      FROM pets p LEFT JOIN shelters s ON s.id = p.shelter_id
                      ORDER BY p.intake_date DESC, p.id DESC')->fetchAll();
 
@@ -113,7 +118,7 @@ layout_top('Pets', 'pets');
                     <thead><tr><th>Pet</th><th>Species</th><th>Age</th><th>Gender</th><th>Shelter</th><th>Intake date</th><th>Status</th><th>Actions</th></tr></thead>
                     <tbody>
                     <?php foreach ($pets as $p): ?>
-                        <tr data-id="<?= $p['id'] ?>" data-name="<?= e($p['name']) ?>" data-species="<?= e($p['species']) ?>" data-breed="<?= e($p['breed']) ?>" data-age-months="<?= $p['age_months'] ?>" data-gender="<?= e($p['gender']) ?>" data-size="<?= e($p['size']) ?>" data-shelter-id="<?= $p['shelter_id'] ?>" data-intake-date="<?= e($p['intake_date']) ?>" data-status="<?= e($p['status']) ?>" data-description="<?= e($p['description']) ?>" data-kennel="<?= e($p['kennel']) ?>" data-caretaker-id="<?= $p['caretaker_id'] ?>" data-health-status="<?= e($p['health_status']) ?>" data-last-checkup="<?= e($p['last_checkup']) ?>">
+                        <tr data-id="<?= $p['id'] ?>" data-name="<?= e($p['name']) ?>" data-species="<?= e($p['species']) ?>" data-breed="<?= e($p['breed']) ?>" data-age-months="<?= $p['age_months'] ?>" data-gender="<?= e($p['gender']) ?>" data-size="<?= e($p['size']) ?>" data-shelter-id="<?= $p['shelter_id'] ?>" data-intake-date="<?= e($p['intake_date']) ?>" data-status="<?= e($p['status']) ?>" data-description="<?= e($p['description']) ?>" data-kennel="<?= e($p['kennel']) ?>" data-caretaker-id="<?= $p['caretaker_id'] ?>" data-health-status="<?= e($p['health_status']) ?>" data-last-checkup="<?= e($p['last_checkup']) ?>" data-traits="<?= e($p['traits']) ?>" data-adoption-fee="<?= e($p['adoption_fee']) ?>" data-health-notes="<?= e($p['health_notes']) ?>">
                             <td><div class="cell-user">
                                 <?php if ($p['has_photo']): ?>
                                     <span class="avatar avatar-sm <?= tint($p['id']) ?>"><img src="photo.php?pet=<?= $p['id'] ?>" alt="" loading="lazy" style="width:100%;height:100%;border-radius:inherit;object-fit:cover"></span>
@@ -184,7 +189,12 @@ layout_top('Pets', 'pets');
                     </select><span class="form-hint">Shown to staff in the staff panel.</span></div>
                     <div class="form-group"><label for="checkup_p4">Last checkup</label><input class="form-control" type="date" id="checkup_p4" name="last_checkup"><span class="form-hint">Updates by itself when staff log a health check.</span></div>
                 </div>
-                <div class="form-group"><label for="pet_description">Notes and temperament</label><textarea class="form-control" id="pet_description" name="description" placeholder="Good with children, needs daily walks, vaccinated"></textarea></div>
+                <div class="form-row">
+                    <div class="form-group"><label for="traits_p5">Traits</label><input class="form-control" type="text" id="traits_p5" name="traits" placeholder="Friendly, Energetic, Good with Kids" maxlength="200"><span class="form-hint">Separate with commas. Shown on the public website.</span></div>
+                    <div class="form-group"><label for="fee_p6">Adoption fee</label><input class="form-control" type="number" id="fee_p6" name="adoption_fee" min="0" step="0.01" placeholder="0"></div>
+                </div>
+                <div class="form-group"><label for="health_notes_p7">Health notes for adopters</label><input class="form-control" type="text" id="health_notes_p7" name="health_notes" placeholder="Vaccinated, Neutered, Microchipped" maxlength="200"></div>
+                <div class="form-group"><label for="pet_description">Notes and temperament</label><textarea class="form-control" id="pet_description" name="description" placeholder="Good with children, needs daily walks, vaccinated"></textarea><span class="form-hint">Shown on the public website as "About".</span></div>
             </div>
             <div class="modal-footer"><button type="button" class="btn btn-ghost" data-modal-close>Cancel</button><button type="submit" class="btn btn-primary"><?= icon('save') ?>Save pet</button></div>
         </form>

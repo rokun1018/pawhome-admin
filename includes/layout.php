@@ -93,6 +93,9 @@ function layout_top(string $title, string $active = ''): void
         <?php if (can('users')): ?>
             <?= nav_link('user-management.php', 'users', 'User Management', $active, 'users', $waitingStaff ? '<span class="nav-count">' . $waitingStaff . '</span>' : '') ?>
         <?php endif; ?>
+        <?php if (can('adopters')): ?>
+            <?= nav_link('adopters.php', 'user', 'Adopters', $active, 'adopters') ?>
+        <?php endif; ?>
         <?php if (can('reports')): ?>
             <?= nav_link('reports.php', 'file', 'Reports', $active, 'reports') ?>
         <?php endif; ?>
@@ -100,6 +103,7 @@ function layout_top(string $title, string $active = ''): void
     </nav>
     <div class="sidebar-footer">
         <a href="/staff/" class="nav-item"><?= icon('clipboard') ?>Staff panel</a>
+        <a href="/user/" class="nav-item" target="_blank"><?= icon('home') ?>Public website</a>
         <a href="logout.php" class="nav-item"><?= icon('logout') ?>Log out</a>
     </div>
 </aside>

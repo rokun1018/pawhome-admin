@@ -62,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'quiz_pass_mark' => (int)($_POST['quiz_pass_mark'] ?? 70),
             'kennels'        => $kennels,
             'boarding_rate'  => max(0, (float)($_POST['boarding_rate'] ?? 0)),
+            'currency'       => mb_substr(trim($_POST['currency'] ?? ''), 0, 5) ?: '৳',
         ];
         if ($s['org_name'] === '' || !filter_var($s['contact_email'], FILTER_VALIDATE_EMAIL)) {
             flash('Enter the organisation name and a valid contact email.', 'error');
@@ -71,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('List at least one kennel.', 'error');
         } else {
             $pdo->prepare('UPDATE settings SET org_name=:org_name, contact_email=:contact_email, contact_phone=:contact_phone,
-                           quiz_pass_mark=:quiz_pass_mark, kennels=:kennels, boarding_rate=:boarding_rate WHERE id = 1')->execute($s);
+                           quiz_pass_mark=:quiz_pass_mark, kennels=:kennels, boarding_rate=:boarding_rate, currency=:currency WHERE id = 1')->execute($s);
             log_activity('Organisation settings changed');
             flash('Organisation settings saved');
         }
@@ -174,6 +175,10 @@ layout_top('Settings', 'settings');
                         <div class="form-row">
                             <div class="form-group"><label for="kennels_47">Boarding kennels <span class="required">*</span></label><textarea class="form-control" id="kennels_47" name="kennels" required style="min-height:70px"><?= e(str_replace(',', ', ', $org['kennels'])) ?></textarea><span class="form-hint">Kennel names separated by commas. Used for bookings and the free kennel count.</span></div>
                             <div class="form-group"><label for="boarding_rate_48">Boarding price per night</label><input class="form-control" type="number" id="boarding_rate_48" name="boarding_rate" min="0" step="0.01" value="<?= e($org['boarding_rate']) ?>"><span class="form-hint">Used for income in the boarding report. Leave 0 if you don't charge.</span></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label for="currency_49">Currency sign</label><input class="form-control" type="text" id="currency_49" name="currency" maxlength="5" value="<?= e($org['currency'] ?? '৳') ?>"><span class="form-hint">Shown next to prices on the public website, e.g. ৳ or $.</span></div>
+                            <div class="form-group"></div>
                         </div>
                         <div class="form-actions"><button type="submit" class="btn btn-primary"><?= icon('save') ?>Save settings</button></div>
                     </form>

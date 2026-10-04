@@ -1,4 +1,4 @@
-# PawHome: Admin panel + Staff panel (PHP + Supabase)
+# PawHome: Public website + Admin panel + Staff panel (PHP + Supabase)
 
 Your admin design, now saving to a real database. The pages look the same as your HTML version; they are just `.php` files now.
 
@@ -14,6 +14,14 @@ assets/js/backend.js     <- already here (connects your design to the database)
 
 You don't need to edit `app.js`. `backend.js` loads after it and makes the forms and buttons save for real.
 
+## Installing the User website upgrade (if the staff panel is already live)
+
+1. **Backup first** (Supabase > Table Editor > export as CSV).
+2. **Database:** Supabase > SQL Editor > New query > paste all of `database/upgrade-2-user.sql` > **Run**. Add-only; running it twice is harmless.
+3. **Code:** on GitHub, **Add file > Upload files**, drag in everything from this folder **except** `database`. The new `user` folder is added and changed files are replaced.
+4. When Render shows **Live**, open your main link: it now shows the public website (`/user/`). Admin is still at `/login.php`, staff at `/staff/`.
+5. In the admin panel: fill in **Traits, Adoption fee, Health notes** for each pet (Pets > Edit), check **Settings > Organisation > Currency sign**, and add each shelter's street address in Supabase > Table Editor > `shelters` > `address`.
+
 ## Installing the Staff panel upgrade (if your admin panel is already live)
 
 Do these in this order:
@@ -23,7 +31,18 @@ Do these in this order:
 3. **Code:** on GitHub, **Add file > Upload files** and drag in everything from this folder **except** `database`. Files with the same name are replaced; your `assets/css/style.css` and `assets/js/app.js` stay as they are.
 4. Wait for Render to show **Live**, then open `https://your-site.onrender.com/staff/`.
 
-New install from scratch? Run `schema.sql`, then `upgrade-1-staff.sql` (then `sample-data.sql` if you want test data).
+New install from scratch? Run `schema.sql`, then `upgrade-1-staff.sql`, then `upgrade-2-user.sql` (then `sample-data.sql` if you want test data).
+
+## How the public website works
+
+- **Addresses:** the main link opens the public website at `/user/`. Signed-in staff who open the main link see the admin dashboard.
+- **Adopter accounts** are separate from staff accounts (`adopters` table). Adopters can never open the admin or staff panels. Admin > **Adopters** lists them and can block one.
+- **Pets:** only pets marked *Available* are listed. Photos, traits, fee and health notes come from the admin Pets form.
+- **Eligibility quiz:** first question asks what kind of pet they want; the rest are the **active** questions from admin Quiz Management that fit that pet (up to 10). The score is saved on the account and copied onto each application, so admin and staff see it.
+- **Applying:** the quiz is required first (the site sends them there and back). Each application appears in admin Adoptions and the staff panel as *Pending*, with all form answers in the review window. One open application per pet per person.
+- **Decisions:** when admin or staff approve, the adopter sees it in **My Profile** (with a red dot on the bell for a week) and the pet moves to their Adoption History.
+- **Boarding:** adopters pick one of their adopted pets or type another pet's details. Requests appear in admin and staff Boarding as *Pending*; the adopter can cancel while it's still waiting. The price per night comes from admin Settings.
+- **Forgot password** emails need the Brevo setup (same as staff).
 
 ## How the two panels work together
 
@@ -49,6 +68,9 @@ New install from scratch? Run `schema.sql`, then `upgrade-1-staff.sql` (then `sa
 | `user-management.php`, `reports.php`, `report.php`, `settings.php` | Administration. |
 | `search.php`, `photo.php` | Top bar search and stored photos. |
 | `includes/shared.php` | Rules both panels share (approvals, kennel checks, sign-in). |
+| `user/` | The public website: pages (`index.php`, `quiz.php`, `profile.php` …), `user-common.php`, and your design files in `css/`, `js/`, `pic/`. |
+| `adopters.php` | Admin list of public website accounts. |
+| `database/upgrade-2-user.sql` | Adds adopter accounts and the public pet fields. Run once. |
 | `staff/` | The staff panel: `index.php`, `login.php`, its `api/` and `auth/` files, and your staff design (`style.css`, `script.js`, `auth.js`). |
 | `database/upgrade-1-staff.sql` | Adds staff roles, care logs and pet care fields. Run once. |
 | `Dockerfile` | Tells Render how to run PHP. Don't edit. |

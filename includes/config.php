@@ -122,6 +122,7 @@ const ACCESS = [
     'quiz'         => ['super_admin', 'shelter_manager'],
     'reports'      => ['super_admin', 'shelter_manager'],
     'users'        => ['super_admin'],
+    'adopters'     => ['super_admin', 'shelter_manager'],      // public website accounts
     'delete'       => ['super_admin', 'shelter_manager'],   // deleting pets and bookings
     'organisation' => ['super_admin'],
 
@@ -164,8 +165,8 @@ function require_login(string $panel = 'admin'): array
         $user = $stmt->fetch();
     }
     if (!$user || $user['status'] !== 'active') {
-        $_SESSION = [];
-        session_destroy();
+        // Forget only the staff sign-in, so an adopter signed in on the public site stays signed in
+        unset($_SESSION['user'], $_SESSION['last_seen'], $_SESSION['remember']);
         if (is_api_request()) json_response(['ok' => false, 'error' => 'Please log in again.'], 401);
         header('Location: ' . ($panel === 'staff' ? '/staff/login.php' : '/login.php'));
         exit;

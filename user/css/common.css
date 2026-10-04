@@ -1,0 +1,89 @@
+/* =====================================================================
+   common.css: small shared styles added for the working website.
+   Loaded after each page's own stylesheet. Your design files are unchanged.
+   ===================================================================== */
+:root {
+    --primary-color: #16a085; --primary-dark: #138d7b; --text-dark: #333333; --text-light: #666666;
+    --bg-white: #ffffff; --bg-light: #f9f9f9; --border-light: #e0e0e0; --shadow-lg: 0 4px 12px rgba(0,0,0,.15);
+}
+
+/* Profile menu in the header (same look as profile.css, for every page) */
+.profile-dropdown-container { position: relative; }
+.profile-dropdown {
+    position: absolute; top: 100%; right: 0; z-index: 1001; min-width: 250px; margin-top: .5rem;
+    background: var(--bg-white); border: 1px solid var(--border-light); border-radius: 8px; box-shadow: var(--shadow-lg);
+}
+.dropdown-header { padding: 1rem; font-weight: 700; color: var(--text-dark); border-bottom: 1px solid var(--border-light); }
+.dropdown-email { padding: 0 1rem; color: var(--text-light); font-size: .85rem; margin-top: .25rem; }
+.dropdown-divider { height: 1px; background: var(--border-light); margin: .5rem 0; }
+.dropdown-item { display: block; padding: .75rem 1rem; color: var(--text-dark); text-decoration: none; }
+.dropdown-item:hover { background: var(--bg-light); color: var(--primary-color); }
+.profile-avatar { cursor: pointer; text-decoration: none; }
+.notification-btn { position: relative; text-decoration: none; }
+.notification-btn .notif-dot {
+    position: absolute; top: 4px; right: 4px; width: 9px; height: 9px; border-radius: 50%;
+    background: #e74c3c; border: 2px solid #fff;
+}
+
+/* Messages */
+.error-message, .flash-error {
+    background: #fdecea; color: #a12a1e; border: 1px solid #f5c2bd; border-radius: 8px;
+    padding: .75rem 1rem; margin: .75rem 0; font-size: .9rem;
+}
+.flash-success {
+    background: #e8f6f3; color: #0f6f62; border: 1px solid #a8dcd2; border-radius: 8px;
+    padding: .75rem 1rem; margin: .75rem 0; font-size: .9rem;
+}
+.flash-wrap { max-width: 1200px; margin: 1rem auto 0; padding: 0 1rem; }
+
+/* Simple form fields used on the profile page */
+.form-field { display: grid; gap: .35rem; margin-bottom: .9rem; }
+.form-field label { font-size: .8rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: .03em; }
+.form-field input {
+    padding: .7rem .8rem; border: 1px solid var(--border-light); border-radius: 8px; font: inherit; color: var(--text-dark);
+}
+.form-field input:focus { outline: none; border-color: var(--primary-color); }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 1.25rem; }
+.btn-solid, .btn-plain {
+    display: inline-block; padding: .65rem 1.2rem; border-radius: 8px; font-weight: 700; cursor: pointer;
+    font: inherit; font-weight: 700; text-decoration: none; border: 1px solid var(--primary-color);
+}
+.btn-solid { background: var(--primary-color); color: #fff; }
+.btn-solid:hover { background: var(--primary-dark); }
+.btn-plain { background: #fff; color: var(--primary-color); }
+.form-actions-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: .5rem; }
+
+/* Quiz page: keep the design usable on smaller screens */
+.page .progress-box, .page .question { width: auto; max-width: 1050px; box-sizing: border-box; }
+.page .progress-box { height: auto; }
+.page .option { height: auto; min-height: 100px; box-sizing: border-box; }
+.page .option .icon { margin-bottom: 16px; }
+.page .right-lay { flex: 1; min-width: 0; }
+.page .quize { min-width: 220px; }
+.page .option .icon b { font-size: 15px; color: #0D9488; }
+.page .option:has(input:checked) .icon b { color: #fff; }
+.page .question .q-hint { color: #6b7280; margin: -6px 0 16px; }
+.page .next[disabled] { opacity: .5; cursor: not-allowed; }
+@media (max-width: 900px) {
+    .page .layout { flex-direction: column; }
+    .page .quize { width: auto; }
+    .page .options { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Pet photo fallback */
+.pet-photo-fallback { width: 100%; height: 100%; object-fit: cover; background: #eef7f5; }
+
+/* Profile lists: pet photos instead of emoji */
+.adoption-image img { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; display: block; }
+.adoption-list, .applications-list { display: grid; gap: 1rem; }
+.list-subtitle { margin: 1.75rem 0 .75rem; font-size: 1.05rem; }
+.btn-link-danger { background: none; border: none; color: #b03a2e; cursor: pointer; font-weight: 600; padding: .4rem; }
+.item-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.quiz-chip { display: inline-block; padding: .25rem .6rem; border-radius: 20px; background: #e8f6f3; color: #0f6f62; font-weight: 700; font-size: .85rem; }
+
+/* Header: keep the menu on one line on wide screens */
+.header .nav { white-space: nowrap; }
+@media (max-width: 860px) { .header .nav { white-space: normal; } }
+/* Initials instead of the emoji once someone is signed in */
+.profile-avatar.initials { font-size: .95rem; font-weight: 700; color: var(--primary-color); }
+.profile-picture { font-size: 2.6rem; font-weight: 700; color: var(--primary-color); }

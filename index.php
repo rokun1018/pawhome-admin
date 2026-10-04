@@ -1,6 +1,8 @@
 <?php
 require __DIR__ . '/includes/config.php';
 require __DIR__ . '/includes/layout.php';
+// The main link is the public website; only signed-in staff see the dashboard
+if (!current_user()) redirect('/user/');
 $user = require_login();
 
 // ---- Key figures ----

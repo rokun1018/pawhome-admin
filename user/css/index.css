@@ -1,0 +1,554 @@
+/* ============================================
+   RESET
+   ============================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #f5f5f5;
+    color: #333333;
+    line-height: 1.6;
+}
+
+button {
+    font-family: inherit;
+}
+
+input, select, textarea {
+    font-family: inherit;
+}
+
+img {
+    max-width: 100%;
+    display: block;
+}
+
+a {
+    text-decoration: none;
+}
+
+/* ============================================
+   VARIABLES
+   ============================================ */
+
+:root {
+    --primary-color: #16a085;
+    --primary-dark: #138d7b;
+    --text-dark: #333333;
+    --text-light: #666666;
+    --text-lighter: #999999;
+    --bg-white: #ffffff;
+    --bg-light: #f9f9f9;
+    --bg-lighter: #f5f5f5;
+    --border-light: #e0e0e0;
+    --border-medium: #cccccc;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* ============================================
+   HEADER
+   ============================================ */
+
+.header {
+    background-color: var(--bg-white);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--shadow);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.header-left {
+    flex: 1;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.logo:hover {
+    transform: scale(1.05);
+}
+
+.logo-icon {
+    font-size: 1.8rem;
+}
+
+.logo-text {
+    font-weight: 700;
+}
+
+.nav {
+    flex: 1;
+    text-align: center;
+}
+
+.nav-link {
+    color: var(--text-dark);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    display: inline-block;
+}
+
+.nav-link:hover {
+    background-color: var(--bg-light);
+    color: var(--primary-color);
+}
+
+.nav-link.active {
+    color: var(--primary-color);
+    font-weight: 600;
+    background-color: rgba(22, 160, 133, 0.1);
+}
+
+.header-right {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.notification-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    padding: 0.5rem;
+}
+
+.notification-btn:hover {
+    transform: scale(1.15);
+}
+
+.profile-avatar {
+    width: 40px;
+    height: 40px;
+    background-color: var(--bg-light);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    cursor: pointer;
+    border: 2px solid var(--border-light);
+    transition: all 0.3s ease;
+}
+
+.profile-avatar:hover {
+    border-color: var(--primary-color);
+    transform: scale(1.1);
+}
+
+/* ============================================
+   MAIN LAYOUT
+   ============================================ */
+
+.main-container {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 2rem;
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.match-card {
+    background-color: var(--bg-white);
+    border: 2px solid var(--primary-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: var(--shadow);
+}
+
+.match-card h2 {
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.match-card p {
+    color: var(--text-light);
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+}
+
+.content {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* ============================================
+   SEARCH & FILTERS
+   ============================================ */
+
+.search-section {
+    background-color: var(--bg-white);
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+
+.search-bar {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.search-input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.search-input::placeholder {
+    color: var(--text-lighter);
+}
+
+.search-input:hover {
+    border-color: var(--border-medium);
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.1);
+}
+
+.btn-search {
+    padding: 0.75rem 2rem;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.btn-search:hover {
+    background-color: var(--primary-dark);
+    box-shadow: var(--shadow);
+}
+
+.btn-search:active {
+    transform: scale(0.98);
+}
+
+.filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.filter-select {
+    padding: 0.75rem;
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background-color: var(--bg-white);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: var(--text-dark);
+}
+
+.filter-select:hover {
+    border-color: var(--border-medium);
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.1);
+}
+
+/* ============================================
+   PET CARDS & GRID
+   ============================================ */
+
+.pets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.pet-card {
+    background-color: var(--bg-white);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.pet-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-lg);
+}
+
+.pet-image {
+    width: 100%;
+    height: 250px;
+    background-color: var(--bg-light);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    transition: transform 0.3s ease;
+}
+
+.pet-card:hover .pet-image {
+    transform: scale(1.05);
+}
+
+.pet-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.pet-info {
+    padding: 1.5rem;
+}
+
+.pet-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.pet-name {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.pet-age {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.pet-breed {
+    color: var(--text-light);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.pet-traits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.trait-badge {
+    background-color: var(--bg-light);
+    color: var(--text-dark);
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border: 1px solid var(--border-light);
+}
+
+.pet-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.btn-primary {
+    padding: 0.6rem 1rem;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    flex: 1;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+    box-shadow: var(--shadow);
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+.btn-secondary {
+    padding: 0.6rem 1rem;
+    background-color: var(--bg-light);
+    color: var(--text-dark);
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.btn-secondary:hover {
+    background-color: var(--border-light);
+    border-color: var(--border-medium);
+}
+
+.btn-secondary:active {
+    transform: scale(0.98);
+}
+
+.btn-back {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-bottom: 2rem;
+    transition: all 0.3s ease;
+    padding: 0.5rem;
+}
+
+.btn-back:hover {
+    color: var(--primary-dark);
+    transform: translateX(-4px);
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+@media (max-width: 768px) {
+    .header {
+        padding: 1rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .logo-text {
+        display: none;
+    }
+
+    .nav {
+        order: 3;
+        width: 100%;
+        margin-top: 1rem;
+    }
+
+    .main-container {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+        gap: 1.5rem;
+    }
+
+    .sidebar {
+        order: 2;
+    }
+
+    .pets-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .filters {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .search-bar {
+        flex-direction: column;
+    }
+
+    .btn-search {
+        width: 100%;
+    }
+
+    .header-right {
+        gap: 1rem;
+    }
+
+    .profile-avatar {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+@media (max-width: 480px) {
+    .header {
+        padding: 1rem;
+    }
+
+    .pets-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .pet-card {
+        width: 100%;
+    }
+
+    .filters {
+        grid-template-columns: 1fr;
+    }
+
+    .search-input {
+        padding: 0.75rem;
+        font-size: 16px;
+    }
+
+    .match-card h2 {
+        font-size: 1rem;
+    }
+
+    .match-card p {
+        font-size: 0.85rem;
+    }
+
+    .main-container {
+        padding: 1rem;
+    }
+}

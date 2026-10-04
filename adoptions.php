@@ -58,7 +58,7 @@ layout_top('Adoptions', 'adoptions');
                         $score = (int)$a['quiz_score'];
                         $bar = $score < $passMark ? 'bad' : ($score < $passMark + 5 ? 'warn' : '');
                         $pet = pet_label($a); ?>
-                        <tr data-id="<?= $a['id'] ?>" data-status="<?= e($a['status']) ?>" data-applicant-name="<?= e($a['applicant_name']) ?>" data-applicant-email="<?= e($a['applicant_email']) ?>" data-applicant-phone="<?= e($a['applicant_phone']) ?>" data-pet="<?= e($pet) ?>" data-quiz-score="<?= $score ?>%" data-submitted="<?= fmt_date($a['created_at']) ?>" data-home-type="<?= e($a['home_type']) ?>" data-admin-notes="<?= e($a['admin_notes']) ?>">
+                        <tr data-id="<?= $a['id'] ?>" data-status="<?= e($a['status']) ?>" data-applicant-name="<?= e($a['applicant_name']) ?>" data-applicant-email="<?= e($a['applicant_email']) ?>" data-applicant-phone="<?= e($a['applicant_phone']) ?>" data-pet="<?= e($pet) ?>" data-quiz-score="<?= $score ?>%" data-submitted="<?= fmt_date($a['created_at']) ?>" data-home-type="<?= e($a['home_type']) ?>" data-admin-notes="<?= e($a['admin_notes']) ?>" data-details="<?= e($a['details'] ?? '') ?>">
                             <td><div class="cell-user"><span class="avatar avatar-sm <?= tint($a['id']) ?>"><?= e(initials($a['applicant_name'])) ?></span><div><strong><?= e($a['applicant_name']) ?></strong><small><?= e($a['applicant_email']) ?></small></div></div></td>
                             <td><?= e($pet) ?></td>
                             <td><div class="progress-cell"><div class="progress <?= $bar ?>"><span style="width:<?= $score ?>%"></span></div><small><?= $score ?>%</small></div></td>
@@ -99,6 +99,7 @@ layout_top('Adoptions', 'adoptions');
                     <div><dt>Phone</dt><dd data-field="applicantPhone"></dd></div>
                     <div><dt>Home type</dt><dd data-field="homeType"></dd></div>
                 </dl>
+                <dl class="detail-grid" id="appDetails" hidden></dl>
                 <div class="form-group"><label for="admin_notes">Internal notes</label><textarea class="form-control" id="admin_notes" name="admin_notes" placeholder="Only staff can see these notes. They save when you click away."></textarea></div>
         </div>
         <div class="modal-footer"><button type="button" class="btn btn-danger-ghost spacer" data-set-status="rejected" data-label="Rejected" data-success="Application rejected"><?= icon('x') ?>Reject</button><button type="button" class="btn btn-outline" data-set-status="review" data-label="Under review" data-success="Marked as under review">Mark under review</button><button type="button" class="btn btn-primary" data-set-status="approved" data-label="Approved" data-success="Application approved"><?= icon('check') ?>Approve</button></div>

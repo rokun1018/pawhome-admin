@@ -115,6 +115,21 @@
             if (form) fillForm(form, currentRow);
             var notes = modal.querySelector('textarea[name="admin_notes"]');
             if (notes) notes.value = currentRow ? (currentRow.dataset.adminNotes || '') : '';
+
+            // Answers from the public application form
+            var details = modal.querySelector('#appDetails');
+            if (details) {
+                var data = {};
+                try { data = JSON.parse((currentRow && currentRow.dataset.details) || '{}') || {}; } catch (e) {}
+                details.innerHTML = '';
+                Object.keys(data).forEach(function (key) {
+                    var wrap = document.createElement('div');
+                    var dt = document.createElement('dt'); dt.textContent = key;
+                    var dd = document.createElement('dd'); dd.textContent = data[key];
+                    wrap.appendChild(dt); wrap.appendChild(dd); details.appendChild(wrap);
+                });
+                details.hidden = !Object.keys(data).length;
+            }
         }, 0);
     });
 
